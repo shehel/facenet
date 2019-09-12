@@ -36,10 +36,11 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from scipy import misc
+from scipy.spatial import distance
 
 import align.detect_face
 import facenet
-
+import pdb
 
 gpu_memory_fraction = 0.3
 facenet_model_checkpoint = os.path.dirname(__file__) + "/../model_checkpoints/20170512-110547"
@@ -94,16 +95,41 @@ class Identifier:
         self.current_id = 1
         with open('comb') as f:
             self.names = f.read().splitlines()
+        self.faces_in_frame = []
+        self.id_in_frame = []
+        self.faces_in_frame.append(tuple([0,0,0,0]))
+        self.id_in_frame.append(0)
     def identify(self, face):
         if face.embedding is not None:
             labels, distances = self.p.knn_query(face.embedding, k = 1)
             # print (distances[0][0])
+            closest_dist = 5
+            if self.faces_in_frame:
+                euclidean = distance.cdist([tuple(face.bounding_box)], self.faces_in_frame)
+                closest_dist = np.min(euclidean)
+                closest_match = np.argmin(euclidean)
+                print (distances)
             if distances[0][0] < 0.6:
-                return str(self.names[labels[0][0]])
+                change_idx = self.id_in_frame.index(labels[0][0])
+                self.faces_in_frame[change_idx]=(tuple(face.bounding_box))
+                return str(labels[0][0])
+            elif closest_dist < 1 and id_in_frame[closest_match] == labels[0][0]:
+                change_idx = self.id_in_frame.index(labels[0][0])
+                self.faces_in_frame[change_idx]=(tuple(face.bounding_box))
+                self.p.add_items(face.embedding, labels[0][0])
+                return str(labels[0][0])
             else:
-                self.p.add_items(face.embedding, self.current_id)
-                self.current_id += 1
-
+                # if self.current_id>1:
+                #     pdb.set_trace()
+                if not self.id_in_frame[closest_match] == self.current_id:
+                    self.faces_in_frame.append(tuple(face.bounding_box))
+                    self.id_in_frame.append(self.current_id)
+                else:
+                    self.p.add_items(face.embedding, self.current_id)
+                    self.faces_in_frame.append(tuple(face.bounding_box))
+                    self.id_in_frame.append(self.current_id)
+                    self.current_id += 1
+            #pdb.set_trace()
                 
             #if labels:
             #    print (labels, distances)

@@ -29,14 +29,15 @@ import sys
 import time
 
 import cv2
-
+import pdb
 import face
 
 
-def add_overlays(frame, faces, frame_rate):
+def add_overlays(frame, faces, frame_rate, faces_in_frame):
     if faces is not None:
         for face in faces:
             face_bb = face.bounding_box.astype(int)
+            #pdb.set_trace()
             cv2.rectangle(frame,
                           (face_bb[0], face_bb[1]), (face_bb[2], face_bb[3]),
                           (0, 255, 0), 2)
@@ -59,7 +60,7 @@ def main(args):
     video_capture = cv2.VideoCapture(0)
     face_recognition = face.Recognition()
     start_time = time.time()
-
+    faces_in_frame = {}
     if args.debug:
         print("Debug enabled")
         face.debug = True
@@ -69,7 +70,7 @@ def main(args):
         ret, frame = video_capture.read()
 
         if (frame_count % frame_interval) == 0:
-            faces = face_recognition.identify(frame)
+            faces = face_recognition.identify(frame, faces_in_frame)
 
             # Check our current fps
             end_time = time.time()
